@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateHabitDto } from './dto/create-habit.dto';
-import { UpdateHabitDto } from './dto/update-habit.dto';
+import { HabitDto } from './dto/habit.dto';
 import { Habit, HabitDocument } from './schemas/habit.schema';
 
 @Injectable()
@@ -11,15 +10,15 @@ export class HabitsService {
     constructor(@InjectModel(Habit.name) private habitModel: Model<HabitDocument>) {
     }
 
-    async getAll(): Promise<Habit[]> {
-        return this.habitModel.find().exec()
+    async getAllByUserEmail(id: string): Promise<Habit[]> {
+        return await this.habitModel.find().where('user_id').all([id]).exec() 
     }
 
     async getById(id: string): Promise<Habit>  {
-        return this.habitModel.findById(id).exec()
+        return await this.habitModel.findById(id).exec()
     }
 
-    async create(createHabitDto: CreateHabitDto): Promise<Habit> {
+    async create(createHabitDto: HabitDto): Promise<Habit> {
         const newHabit = new this.habitModel(createHabitDto)
         return newHabit.save()
     }
@@ -28,7 +27,7 @@ export class HabitsService {
         return this.habitModel.findByIdAndRemove(id)
     }
 
-    async update(updateHabitDto: UpdateHabitDto, id: string): Promise<Habit> {
+    async update(updateHabitDto: HabitDto, id: string): Promise<Habit> {
         return this.habitModel.findByIdAndUpdate(id, updateHabitDto, {new: true})
     }
 }

@@ -1,38 +1,77 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put } from '@nestjs/common';
-import { CreateHabitDto } from './dto/create-habit.dto';
-import { UpdateHabitDto } from './dto/update-habit.dto';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { IRequestWithUserInfo } from '../interfaces/interface';
+import { UserJwtGuard } from '../users/user.jwt.guard';
+import { HabitDto } from './dto/habit.dto';
 import { HabitsService } from './habits.service';
 import { Habit } from './schemas/habit.schema';
 
-@Controller('habits')
+@ApiTags('Привычки')
+@ApiBearerAuth()
+@Controller('api')
 export class HabitsController {
 
     constructor(private readonly habitsService: HabitsService) {
+    }    
+
+    @ApiOperation({summary: 'Список привычек пользователя'})
+    @ApiResponse({status: 200, type: Habit}) 
+    @UseGuards(UserJwtGuard)   
+    @Get('/habits')
+    async getAll(@Req() req: IRequestWithUserInfo): Promise<Habit[]> {           
+        return await this.habitsService.getAllByUserEmail(req.user.id)
     }
 
-    @Get()
-    getAll(): Promise<Habit[]> {
-        return this.habitsService.getAll()
+    @ApiOperation({summary: 'Информация о выбранной привычке'})
+    @ApiResponse({status: 200, type: Habit})
+    @UseGuards(UserJwtGuard)
+    @Get('/habit/:id')
+    async getHabit(@Param('id') id: string, @Req() req: IRequestWithUserInfo): Promise<Habit> {
+        const habbit = await this.habitsService.getById(id)
+        if (habbit.user_id === req.user.id) {
+            return habbit
+        } else {
+            throw new UnauthorizedException({message: 'Это не ваша привычка! Доступ запрещен'}) 
+        }        
     }
 
-    @Get(':id')
-    getHabit(@Param('id') id: string): Promise<Habit> {
-        return this.habitsService.getById(id)
-    }
-
-    @Post()
+    @ApiOperation({summary: 'Создание новой привычки'})
+    @ApiResponse({status: 201, type: Habit})
+    @UseGuards(UserJwtGuard)
+    @Post('/habit')
     @HttpCode(HttpStatus.CREATED)
-    createHabit(@Body() createHabitDto: CreateHabitDto): Promise<Habit> {
-        return this.habitsService.create(createHabitDto)
+    async createHabit(@Body() createHabitDto: HabitDto, @Req() req: IRequestWithUserInfo): Promise<Habit> {        
+        if (createHabitDto.user_id === req.user.id) {
+            return await this.habitsService.create(createHabitDto)
+        } else {
+            throw new UnauthorizedException({message: 'Вы не можете создавать привычки для других пользователей'}) 
+        }        
     }
 
-    @Delete(':id')    
-    removeHabit(@Param('id') id: string): Promise<Habit> {
-        return this.habitsService.remove(id)
+    @ApiOperation({summary: 'Удаление привычки'})
+    @ApiResponse({status: 200, type: Habit})
+    @UseGuards(UserJwtGuard)
+    @Delete('/habit/:id')    
+    async removeHabit(@Param('id') id: string, @Req() req: IRequestWithUserInfo): Promise<Habit> {
+        const habbit = await this.habitsService.getById(id)
+        if (habbit.user_id === req.user.id) {
+            return await this.habitsService.remove(id)
+        } else {
+            throw new UnauthorizedException({message: 'Нельзя удалять чужие привычки'}) 
+        }        
     }
 
-    @Put(':id')    
-    updateHabit(@Body() updateHabitDto: UpdateHabitDto, @Param('id') id: string): Promise<Habit> {
-        return this.habitsService.update(updateHabitDto, id)
+    @ApiOperation({summary: 'Изменение привычки'})
+    @ApiResponse({status: 200, type: Habit})
+    @UseGuards(UserJwtGuard)
+    @Put('/habit/:id')    
+    async updateHabit(@Body() updateHabitDto: HabitDto, 
+                @Param('id') id: string, 
+                @Req() req: IRequestWithUserInfo): Promise<Habit> {
+        if (updateHabitDto.user_id === req.user.id) {
+            return await this.habitsService.update(updateHabitDto, id)
+        } else {
+            throw new UnauthorizedException({message: 'Вы не можете изменять привычки других пользователей'}) 
+        }        
     }
 }
