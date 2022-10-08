@@ -18,7 +18,6 @@ export class Catalog {
                   description: 'Подробное описание привычки'})
     @Prop({ required: true })
     detail: string
-
 }
 
 export const CatalogSchema = SchemaFactory.createForClass(Catalog)

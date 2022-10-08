@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Req, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { IJwtToken } from 'src/interfaces/interface';
+import { IJwtToken, IRequestWithUserInfo } from 'src/interfaces/interface';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ValidateUserDto } from './dto/validate-user.dto';
 import { UserInfo } from './schemas/user-info.schema';
@@ -18,9 +18,9 @@ export class UsersController {
     @ApiOperation({summary: 'Информация о пользователе'})
     @ApiResponse({status: 200, type: User})
     @UseGuards(UserJwtGuard)
-    @Get('/user/:id')
-    async getUser(@Param('id') id: string): Promise<UserInfo> {
-        const user = await this.usersService.getById(id)
+    @Get('/user')
+    async getUser(@Req() req: IRequestWithUserInfo): Promise<UserInfo> {
+        const user = await this.usersService.getById(req.user.id)
         return {username: user.username, email: user.email, id: user._id.toString()}
     }
 
